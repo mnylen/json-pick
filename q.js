@@ -46,15 +46,15 @@ function asSelectors(path, matcher) {
     var selectors     = [];
 
     if (spec.field.length > 0) {
-        selectors.push(fieldSelector(spec.field));
+        selectors.push(selectField(spec.field));
     }
 
     if (spec.index) {
         if (spec.index === '*') {
-            selectors.push(anyIndexSelector(remainingPath, matcher));
+            selectors.push(selectFirstMatchingIndex(remainingPath, matcher));
             remainingPath = []; // omit the remaining path
         } else {
-            selectors.push(numericIndexSelector(spec.index));
+            selectors.push(selectIndex(spec.index));
         }
     }
 
@@ -75,20 +75,20 @@ function parseComponents(spec) {
     } 
 }
 
-function fieldSelector(fieldName) {
+function selectField(fieldName) {
     return function(object) {
         return object[fieldName];
     };
 }
 
-function numericIndexSelector(index) {
+function selectIndex(index) {
     index = (typeof index === 'string') ? parseInt(index, 10) : index;
     return function(array) {
         return array[index];
     }
 }
 
-function anyIndexSelector(path, matcher) {
+function selectFirstMatchingIndex(path, matcher) {
     return function(array) {
         var len = array.length;
         var match;
