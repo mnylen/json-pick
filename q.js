@@ -13,19 +13,19 @@ function selectPath(path) {
         return part.length > 0;
     }
 
-    var parts        = path.split("/").filter(nonEmpty);
-    var partsLength  = parts.length;
     var defaultValue = undefined;
+
+    path = path.split("/").filter(nonEmpty);
     
     return function(item) {
         var branch = item;
+        var field  = path.shift();
 
-        for (var idx = 0; idx < partsLength; idx++) {
-            var key = parts[idx];
-            branch  = branch[key];
+        while (typeof field !== 'undefined') {
+            branch = branch[field];
+            field  = path.shift();
 
             if (typeof branch === 'undefined') {
-                // return default
                 return defaultValue;
             }
         }
