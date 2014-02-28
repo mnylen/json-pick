@@ -1,0 +1,8 @@
+{
+    "name" : "q.js",
+    "version" : "0.0.1",
+    "devDependencies" : {
+        "mocha" : "latest",
+        "chai" : "1.9.0"
+    }
+}
