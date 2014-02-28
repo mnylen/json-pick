@@ -28,8 +28,37 @@ describe('q: selecting path', function() {
         "/b[*]/d"  : "d in path /b[2]/d", 
     }, function(path, expected) {
         it("should return " + path + " correctly from the fixture", function() {
-            expect(q(path, fixture)).to.eql(expected);
             expect(q(path)(fixture)).to.eql(expected);
+        });
+    });
+});
+
+describe('q: selecting path with custom matcher', function() {
+    var fixture = {
+        "a" : 1,
+        "b" : 2,
+        "c" : [
+            1,
+            2,
+            3,
+            4
+        ]
+    };
+
+    var evenMatcher = function(number) {
+        return number % 2 === 0;
+    };
+
+    forEachKeyValue({
+        "/a"    : undefined,
+        "/b"    : 2,
+        "/c"    : undefined,
+        "/c[0]" : undefined,
+        "/c[1]" : 2,
+        "/c[*]" : 2
+    }, function(path, expected) {
+        it("should return " + path + " correctly from fixture", function() {
+            expect(q(path, evenMatcher)(fixture)).to.eql(expected);
         });
     });
 });

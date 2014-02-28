@@ -1,46 +1,42 @@
-function q(path) {
-    var fn = selectPath(path);
+function q(path, matcher) {
+    path    = (typeof path === 'string') ? path.split("/").filter(nonEmpty) : path;
+    matcher = matcher || valueDefined;
 
-    if (arguments.length > 1) {
-        return fn(arguments[1]);
-    } else {
-        return fn;
-    }
-}
-
-function nonEmpty(selector) {
-    return selector.length > 0;
-}
-
-function identity(fieldSelector) {
-    return fieldSelector;
-}
-
-function selectPath(path) {
-    path = (typeof path === 'string') ? path.split("/").filter(nonEmpty) : path;
-
-    var selectors    = asSelectors(path);
+    var selectors    = asSelectors(path, matcher);
     var defaultValue = undefined;
 
-    function selectNext(item) {
+    function selectFrom(item) {
         if (typeof item === 'undefined') {
             return defaultValue;
         }
 
         var selector = selectors.shift();
         if (selector) {
-            return selectNext(selector(item));
+            return selectFrom(selector(item));
         } else {
             return item;
         }
     }
 
     return function(item) {
-        return selectNext(item);
+        var value = selectFrom(item);
+        if (matcher(value)) {
+            return value;
+        } else {
+            return defaultValue;
+        }
     };
 }
 
-function asSelectors(path) {
+function valueDefined(selectedValue) {
+    return typeof selectedValue !== 'undefined';
+}
+
+function nonEmpty(selector) {
+    return selector.length > 0;
+}
+
+function asSelectors(path, matcher) {
     if (path.length === 0) {
         return [];
     }
@@ -55,7 +51,7 @@ function asSelectors(path) {
 
     if (spec.index) {
         if (spec.index === '*') {
-            selectors.push(anyIndexSelector(remainingPath));
+            selectors.push(anyIndexSelector(remainingPath, matcher));
             remainingPath = []; // omit the remaining path
         } else {
             selectors.push(numericIndexSelector(spec.index));
@@ -92,13 +88,13 @@ function numericIndexSelector(index) {
     }
 }
 
-function anyIndexSelector(path) {
+function anyIndexSelector(path, matcher) {
     return function(array) {
         var len = array.length;
         var match;
 
         for (var idx = 0; idx < len; idx++) {
-            match = selectPath(path)(array[idx]);
+            match = q(path, matcher)(array[idx]);
             if (typeof match !== 'undefined') {
                 break;
             }
