@@ -8,45 +8,104 @@ function q(path) {
     }
 }
 
-function selectPath(path) {
-    function nonEmpty(part) {
-        return part.length > 0;
-    }
+function nonEmpty(selector) {
+    return selector.length > 0;
+}
 
+function identity(fieldSelector) {
+    return fieldSelector;
+}
+
+function selectPath(path) {
+    path = (typeof path === 'string') ? path.split("/").filter(nonEmpty) : path;
+
+    var selectors    = asSelectors(path);
     var defaultValue = undefined;
 
-    path = path.split("/").filter(nonEmpty);
+    function selectNext(item) {
+        if (typeof item === 'undefined') {
+            return defaultValue;
+        }
 
-    function selectLeaf(path, branch) {
-        if (path[path.length-1] === "]") {
-            var field = path.substring(0, path.lastIndexOf('['));
-            var index = path.substring(path.lastIndexOf('[')+1, path.lastIndexOf(']'));
-
-            if (nonEmpty(field)) {
-                return branch[field][index];
-            } else { // self index selector
-                return branch[index];
-            }
+        var selector = selectors.shift();
+        if (selector) {
+            return selectNext(selector(item));
         } else {
-            return branch[path];
+            return item;
         }
     }
 
     return function(item) {
-        var branch = item;
-        var field  = path.shift();
+        return selectNext(item);
+    };
+}
 
-        while (typeof field !== 'undefined') {
-            branch = selectLeaf(field, branch);
-            field  = path.shift();
+function asSelectors(path) {
+    if (path.length === 0) {
+        return [];
+    }
 
-            if (typeof branch === 'undefined') {
-                return defaultValue;
+    var spec          = parseComponents(path[0]);
+    var remainingPath = path.slice(1);
+    var selectors     = [];
+
+    if (spec.field.length > 0) {
+        selectors.push(fieldSelector(spec.field));
+    }
+
+    if (spec.index) {
+        if (spec.index === '*') {
+            selectors.push(anyIndexSelector(remainingPath));
+            remainingPath = []; // omit the remaining path
+        } else {
+            selectors.push(numericIndexSelector(spec.index));
+        }
+    }
+
+    var remainingSelectors = asSelectors(remainingPath);
+    return selectors.concat(remainingSelectors);
+}
+
+function parseComponents(spec) {
+    var indexed = spec[spec.length-1] === ']';
+
+    if (!indexed) {
+        return { field : spec }; 
+    } else {
+        var field = spec.substring(0, spec.lastIndexOf('['));
+        var index = spec.substring(spec.lastIndexOf('[')+1, spec.lastIndexOf(']'));
+
+        return { field : field, index : index }; 
+    } 
+}
+
+function fieldSelector(fieldName) {
+    return function(object) {
+        return object[fieldName];
+    };
+}
+
+function numericIndexSelector(index) {
+    index = (typeof index === 'string') ? parseInt(index, 10) : index;
+    return function(array) {
+        return array[index];
+    }
+}
+
+function anyIndexSelector(path) {
+    return function(array) {
+        var len = array.length;
+        var match;
+
+        for (var idx = 0; idx < len; idx++) {
+            match = selectPath(path)(array[idx]);
+            if (typeof match !== 'undefined') {
+                break;
             }
         }
 
-        return branch;
-    };
+        return match;
+    }
 }
 
 module.exports = q;
