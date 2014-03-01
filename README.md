@@ -1,21 +1,51 @@
 
-# q() : field selector for JavaScript
+# pick(path, matcher)(data) : query values from JSON
 
-	// Simple path parsing
-	
     var person = {
       "name" : "John",
       "age" : 32,
-      "bestFriend" : { "name" : "Adam" },
       "relationships" : [
-        { "with" : { "name" : "Susan" } },
-        { "with" : { "name" : "Katie" } }
+        { "status" : "ongoing", with" : { "name" : "Susan" } },
+        { "status" : "ended", "with" : { "name" : "Katie" } }
       ]
     };
     
-    q("/")(person)                           === person
-    q("/name")(person)                       === "John"
-    q("/age")(person)                        === 32
-    q("/bestFriend/name")(person)            === "Adam"
-    q("/relationships[0]/with/name")(person) === "Susan"
+    // simple & safe path extraction
+    pick("/")(person)                              === person
+    pick("/name")(person)                          === "John"
+    pick("/missing/path").defaultTo("n/a")(person) === "n/a"
     
+    // selections inside arrays
+    pick("/relationships[0]/with/name")(person)    === "Susan"  
+    pick("/relationships[]/with/name")(person)     === ["Susan", "Katie"]
+    
+    // filtering with matchers
+    var currentlyDating = pick("/relationships[]:first/with/name", { "/../../status" : "ongoing" })(person) === "Susan"
+    var statusWithKatie = pick("/relationships[]:first/status", { "/../with/name" : "Katie" })(person)      === "ended"   
+ 
+
+## Paths
+
+Paths consist of one or more mappers, separated by "/". Simply put, a mapper specifies how the current value should be transformed in order to proceed getting value at end of the path.
+
+| Mapper       | Maps to                                         |
+| ------------ | ----------------------------------------------- |
+| (empty)      | `self`                                          |
+| `..`         | `parent`                                        |
+| `field`      | `self.field`                                    |
+| `[idx]`      | `self[idx]`                                     |
+| `[]`         | `[self[0], self[1], ..., self[self.length-1]]`  |
+
+Also, you can use `:first` and `:last` transformers to select first or last matching item with the `[]` mapper.
+
+
+## Matchers
+
+Matchers filter values selected by path. The default matcher gives a pass for all defined values (i.e., the ones that exist).
+
+If you want something fancier, you can give a custom function `(value) => boolean` as the matcher.
+
+You can also use a simple property equality matcher by passing an object with one or more of (`path`, `expectedValue`) pairs. Remember, you can use the `..` parent selector.
+	
+    var currentlyDating = pick("/relationships[]:first/with/name", { "/../../status" : "ongoing" })(person);
+    console.log(currentlyDating) // => Susan
