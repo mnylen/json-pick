@@ -1,154 +1,140 @@
-function pick(path, matcher) {
-    var wrappedPick = pickWrapped(path, matcher);
+function pick(path, matchObject) {
+    var matcher  = compileMatcher(matchObject);
+    var selector = compileSelector(path, matcher);
 
-    return function(data) {
-        return unwrap(wrappedPick(data));
-    };
-}
-
-function pickWrapped(path, matcher) {
-    path    = (typeof path === 'string') ? path.split("/").filter(nonEmpty) : path;
-    matcher = asMatcher(matcher || valueDefined);
-
-    var selectors    = asSelectors(path, matcher);
-    var defaultValue = undefined;
-
-    function select(data, selectorIdx) {
-        if (typeof data === 'undefined') {
-            return defaultValue;
+    function applyMatcher(selection) {
+        if (!selection.matched) {
+            selection.matched = matcher(selection);
         }
 
-        var selector = selectors[selectorIdx];
-        if (typeof selector !== 'undefined') {
-            return select(selector(data), selectorIdx+1);
-        } else {
-            return data; 
-        }
+        return selection.matched;
     }
 
     return function(data, parent) {
-        data = (data instanceof WrappedValue) ? data : wrap(data, parent); 
+        var wasWrapped = (data instanceof Selection);
+        data = (data instanceof Selection) ? data : createSelection(data, parent); 
 
-        var value = select(data, 0);
-        if (typeof value !== 'undefined' && (value.valid || matcher(value))) {
-            value.valid = true;
-            return value;
-        } else {
-            return defaultValue;
+        var selection = selector(data);
+        if (typeof selection !== 'undefined' && applyMatcher(selection)) {
+            return wasWrapped ? selection : selection.value;
         }
+
+        return undefined;
     };
 }
 
-function wrap(value, parent, valid) {
-    if (typeof value === 'undefined') {
-        return value;
-    } else {
-        return new WrappedValue(value, parent, valid);
-    }
-}
 
-function unwrap(wrappedValue) {
-    if (typeof wrappedValue !== 'undefined') {
-        return wrappedValue.value; 
-    } else {
-        return undefined;
-    }
-}
-
-function WrappedValue(value, parent, valid) {
-    this.value = value;
-    this.parent = parent;
-    this.valid = valid;
-}
-
-function asMatcher(spec) {
-    if (typeof spec === 'function') {
-        return spec;
+function compileMatcher(matchObject) {
+    if (typeof matchObject === 'undefined') {
+        return function(candidate) {
+            return typeof candidate !== 'undefined';
+        };
     }
 
-    var compiled = [];
-    for (var path in spec) {
-        if (!spec.hasOwnProperty(path)) {
-            continue;
+    if (typeof matchObject === 'function') {
+        return matchObject;
+    }
+
+    var matchers = [];
+    for (var path in matchObject) {
+        if (matchObject.hasOwnProperty(path)) {
+            var expected = matchObject[path];
+            var selector = pick(path);
+            matchers.push({selector : selector, expected : expected });
+        }
+    }
+
+    return function(candidate) {
+        for(var idx = 0; idx < matchers.length; idx++) {
+            var test      = matchers[idx];
+            var selection = test.selector(candidate);
+
+            if (selection.value !== test.expected) {
+                return false;
+            }
         }
 
-        var expectedValue = spec[path];
-        compiled.push([pick(path), expectedValue]);
-    }
+        return true; 
+    };
+}
 
-    var len = compiled.length;
+function compileSelector(path, matcher) {
+    var selectors = selectorsForPath(path, matcher);
+    return function(currentSelection) {
+        for (var idx = 0; idx < selectors.length; idx++) {
+            var selector     = selectors[idx];
+            currentSelection = selector(currentSelection);
 
-    return function(data) {
-        var idx;
-        var fail = false;
-
-        for(idx = 0; idx < len; idx++) {
-            var test = compiled[idx];
-            var extractValue = test[0];
-            var expectedValue = test[1];
-
-            if (extractValue(data) !== expectedValue) {
-                fail = true;
+            if (typeof currentSelection === 'undefined') {
                 break;
             }
         }
 
-        return !fail;
-    };
+        return currentSelection;
+    }
 }
 
-function valueDefined(wrappedValue) {
-    return typeof wrappedValue !== 'undefined';
-}
+function selectorsForPath(path, matcher) {
+    var segments  = toSegments(path); 
+    var selectors = [];
 
-function nonEmpty(selector) {
-    return selector.length > 0;
-}
-
-function asSelectors(path, matcher) {
-    if (path.length === 0) {
-        return [];
+    function nonEmpty(selector) {
+        return selector.length > 0;
     }
 
-    var spec          = parseComponents(path[0]);
-    var remainingPath = path.slice(1);
-    var selectors     = [];
-
-    if (spec.field.length > 0) {
-        if (spec.field === '..') {
-            selectors.push(selectParent);
-        } else {
-            selectors.push(selectField(spec.field));
+    function toSegments(path) {
+        if (typeof path === 'string') {
+            return path.split("/").filter(nonEmpty);
+        } else { // already segmented
+            return path.slice(0);
         }
     }
 
-    if (typeof spec.index !== 'undefined') {
-        if (spec.index === '*') {
-            selectors.push(selectFirstMatchingIndex(remainingPath, matcher));
-            remainingPath = []; // omit the remaining path
-        } else if (spec.index === '') {
-            selectors.push(selectAllMatchingIndexes(remainingPath, matcher));
-            remainingPath = [];
-        } else {
-            selectors.push(selectIndex(spec.index));
+    while (segments.length > 0) {
+        var segment = segments.shift();
+        var field  = parseField(segment);
+        var index  = parseIndex(segment);
+
+        if (typeof field === 'string') {
+            if (field === '..') {
+                selectors.push(selectParent);
+            } else {
+                selectors.push(selectField(field));
+            }
+        }
+
+        if (typeof index === 'string') {
+            if (index === '*') {
+                selectors.push(selectAny(segments, matcher));
+                segments = [];
+            } else if (index === '') {
+                selectors.push(selectAll(segments, matcher));
+                segments = [];
+            } else {
+                selectors.push(selectField(parseInt(index)));
+            }
         }
     }
 
-    var remainingSelectors = asSelectors(remainingPath);
-    return selectors.concat(remainingSelectors);
+    return selectors;
 }
 
-function parseComponents(spec) {
-    var indexed = spec[spec.length-1] === ']';
+function parseField(segment) {
+    var indexStart = segment.lastIndexOf('[');
+    var length     = (indexStart !== -1) ? indexStart : segment.length;
+    var field      = segment.substring(0, length); 
+    return field.length > 0 ? field : undefined;
+}
 
-    if (!indexed) {
-        return { field : spec }; 
+function parseIndex(segment) {
+    var openingBracket = segment.lastIndexOf('[');
+    var closingBracket = segment.lastIndexOf(']');
+
+    if (openingBracket !== -1 && closingBracket !== -1) {
+        return segment.substring(openingBracket+1, closingBracket);
     } else {
-        var field = spec.substring(0, spec.lastIndexOf('['));
-        var index = spec.substring(spec.lastIndexOf('[')+1, spec.lastIndexOf(']'));
-
-        return { field : field, index : index }; 
-    } 
+        return undefined;
+    }
 }
 
 function selectParent(wrappedObject) {
@@ -156,30 +142,22 @@ function selectParent(wrappedObject) {
 }
 
 function selectField(fieldName) {
-    return function(wrappedObject) {
+    return function fieldSelector(wrappedObject) {
         var object = wrappedObject.value;
-        return wrap(object[fieldName], wrappedObject);
+        return createSelection(object[fieldName], wrappedObject);
     };
 }
 
-function selectIndex(index) {
-    index = (typeof index === 'string') ? parseInt(index, 10) : index;
-    return function(wrappedArray) {
-        var array = wrappedArray.value;
-        return wrap(array[index], wrappedArray);
-    }
-}
+function selectAny(remainingSegments, matcher) {
+    return function anySelector(currentSelection) {
+        var array = currentSelection.value;
 
-function selectFirstMatchingIndex(path, matcher) {
-    return function(wrappedArray) {
-        var array = wrappedArray.value;
-        var len   = array.length;
-        var match = undefined;
+        for (var idx = 0; idx < array.length; idx++) {
+            var nextRoot  = createSelection(array[idx], currentSelection);
+            var selection = pick(remainingSegments, matcher)(nextRoot);
 
-        for (var idx = 0; idx < len; idx++) {
-            match = pickWrapped(path, matcher)(array[idx], wrappedArray);
-            if (typeof match !== 'undefined') {
-                return match; 
+            if (typeof selection !== 'undefined') {
+                return selection; 
             }
         }
 
@@ -187,21 +165,35 @@ function selectFirstMatchingIndex(path, matcher) {
     }
 }
 
-function selectAllMatchingIndexes(path, matcher) {
-    return function(wrappedArray) {
-        var array  = wrappedArray.value;
+function selectAll(path, matcher) {
+    return function allSelector(currentSelection) {
         var result = [];
-        var len    = array.length;
+        var array  = currentSelection.value;
 
-        for (var idx = 0; idx < len; idx++) {
-            var match = pickWrapped(path, matcher)(array[idx]);
-            if (typeof match !== 'undefined') {
-                result.push(match.value);
+        for (var idx = 0; idx < array.length; idx++) {
+            var nextValue = pick(path, matcher)(array[idx]);
+
+            if (typeof nextValue !== 'undefined') {
+                result.push(nextValue);
             }
         }
 
-        return wrap(result, wrappedArray, true);
+        return createSelection(result, currentSelection, true);
     };
+}
+
+function Selection(value, parent, matched) {
+    this.value = value;
+    this.parent = parent;
+    this.matched = matched;
+}
+
+function createSelection(value, parent, matched) {
+    if (typeof value === 'undefined') {
+        return value;
+    } else {
+        return new Selection(value, parent, matched);
+    }
 }
 
 module.exports = pick; 
