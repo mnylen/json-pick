@@ -114,6 +114,11 @@ testSuite("user-provided matcher function", {
         [testPick("/[]", isOdd)(numbers), [1,3,5,7,9]]
 });
 
+testSuite("matchers", {
+    "can validate for property equality":
+        [testPick("/relationships[*]",  { "status" : "ongoing" })(john), { "status" : "ongoing", "with" : susan }]
+});
+
 function forEachKeyValue(object, fn) {
     var key;
 

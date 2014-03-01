@@ -1,6 +1,6 @@
 function pick(path, matcher) {
     path    = (typeof path === 'string') ? path.split("/").filter(nonEmpty) : path;
-    matcher = matcher || valueDefined;
+    matcher = asMatcher(matcher || valueDefined);
 
     var selectors    = asSelectors(path, matcher);
     var defaultValue = undefined;
@@ -25,6 +25,42 @@ function pick(path, matcher) {
         } else {
             return defaultValue;
         }
+    };
+}
+
+function asMatcher(spec) {
+    if (typeof spec === 'function') {
+        return spec;
+    }
+
+    var compiled = [];
+    for (var path in spec) {
+        if (!spec.hasOwnProperty(path)) {
+            continue;
+        }
+
+        var expectedValue = spec[path];
+        compiled.push([pick(path), expectedValue]);
+    }
+
+    var len = compiled.length;
+
+    return function(data) {
+        var idx;
+        var fail = false;
+
+        for(idx = 0; idx < len; idx++) {
+            var test = compiled[idx];
+            var extractValue = test[0];
+            var expectedValue = test[1];
+
+            if (extractValue(data) !== expectedValue) {
+                fail = true;
+                break;
+            }
+        }
+
+        return !fail;
     };
 }
 
