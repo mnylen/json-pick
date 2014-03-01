@@ -28,16 +28,14 @@
 
 Paths consist of one or more mappers, separated by "/". Simply put, a mapper specifies how the current value should be transformed in order to proceed getting value at end of the path.
 
-| Mapper       | Maps to                                         |
-| ------------ | ----------------------------------------------- |
-| (empty)      | `self`                                          |
-| `..`         | `parent`                                        |
-| `field`      | `self.field`                                    |
-| `[idx]`      | `self[idx]`                                     |
-| `[]`         | `[self[0], self[1], ..., self[self.length-1]]`  |
-
-Also, you can use `:first` and `:last` transformers to select first or last matching item with the `[]` mapper.
-
+| Mapper       | Maps to                                                |
+| ------------ | ------------------------------------------------------ |
+| (empty)      | `self`                                                 |
+| `..`         | `parent`                                               |
+| `field`      | `self.field`                                           |
+| `[idx]`      | `self[idx]`                                            | 
+| `[]`         | all `self[idx]` that pass the matcher                  |
+| `[*]`        | first `self[idx]` that passes the matcher              | 
 
 ## Matchers
 
