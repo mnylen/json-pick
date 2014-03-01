@@ -1,4 +1,4 @@
-function pick(path, matchObject) {
+function pick(path, matchObject, defaultValue) {
     var matcher  = compileMatcher(matchObject);
     var selector = compileSelector(path, matcher);
 
@@ -19,7 +19,7 @@ function pick(path, matchObject) {
             return wasWrapped ? selection : selection.value;
         }
 
-        return undefined;
+        return defaultValue;
     };
 }
 

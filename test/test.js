@@ -38,10 +38,10 @@ john = {
 
 var persons = [john, susan, katie, hugh, lisa];
 
-function testPick(path, matcher) {
+function testPick(path, matcher, defaultValue) {
     return function(data) {
         return function(expected) {
-            var actual = pick(path, matcher)(data);
+            var actual = pick(path, matcher, defaultValue)(data);
             expect(actual).to.eql(expected);
         };
     };
@@ -126,6 +126,17 @@ testSuite("matchers", {
 
     "can use parent selector (#2)":
         [testPick("/relationships[]/with/name", { "/../../status" : "ended" })(john), ["Katie"]]
+});
+
+testSuite("default value", {
+    "reverts to provided default when value is not found":
+        [testPick("/foo", undefined, "n/a")(john), "n/a"],
+
+    "still returns empty array when /[]/foo does not match anything":
+        [testPick("/[]/foo", undefined, "n/a")(persons), []],
+
+    "reverts to provided default when using /[*]/foo selector":
+        [testPick("/[*]/foo", undefined, "n/a")(persons), "n/a"]
 });
 
 function forEachKeyValue(object, fn) {
