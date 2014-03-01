@@ -96,6 +96,24 @@ testSuite("array selection", {
         [testPick("/[]/parents/father"), persons, [hugh]]
 });
 
+var numbers = [1,2,3,4,5,6,7,8,9,10];
+function isOdd(value)     { return value % 2 !== 0; } 
+function greaterThan(min) { return function(value) { return value > min; } }
+
+testSuite("user-provided matcher function", {
+    "selects value when it returns true":
+        [testPick("/", isOdd)(1), 1],
+
+    "discards value when it returns false":
+        [testPick("/", isOdd)(2), undefined],
+
+    "can be used to find first matching item":
+        [testPick("/[*]", greaterThan(5))(numbers), 6],
+
+    "can be used to filter arrays":
+        [testPick("/[]", isOdd)(numbers), [1,3,5,7,9]]
+});
+
 function forEachKeyValue(object, fn) {
     var key;
 
