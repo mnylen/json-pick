@@ -5,21 +5,21 @@ function pick(path, matcher) {
     var selectors    = asSelectors(path, matcher);
     var defaultValue = undefined;
 
-    function selectFrom(item) {
-        if (typeof item === 'undefined') {
+    function select(data, selectorIdx) {
+        if (typeof data === 'undefined') {
             return defaultValue;
         }
 
-        var selector = selectors.shift();
-        if (selector) {
-            return selectFrom(selector(item));
+        var selector = selectors[selectorIdx];
+        if (typeof selector !== 'undefined') {
+            return select(selector(data), selectorIdx+1);
         } else {
-            return item;
+            return data;
         }
     }
 
-    return function(item) {
-        var value = selectFrom(item);
+    return function(data) {
+        var value = select(data, 0);
         if (matcher(value)) {
             return value;
         } else {
