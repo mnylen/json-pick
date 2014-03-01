@@ -49,10 +49,13 @@ function asSelectors(path, matcher) {
         selectors.push(selectField(spec.field));
     }
 
-    if (spec.index) {
+    if (typeof spec.index !== 'undefined') {
         if (spec.index === '*') {
             selectors.push(selectFirstMatchingIndex(remainingPath, matcher));
             remainingPath = []; // omit the remaining path
+        } else if (spec.index === '') {
+            selectors.push(selectAllMatchingIndexes(remainingPath, matcher));
+            remainingPath = [];
         } else {
             selectors.push(selectIndex(spec.index));
         }
@@ -102,6 +105,22 @@ function selectFirstMatchingIndex(path, matcher) {
 
         return match;
     }
+}
+
+function selectAllMatchingIndexes(path, matcher) {
+    return function(array) {
+        var result = [];
+        var len    = array.length;
+
+        for (var idx = 0; idx < len; idx++) {
+            var match = pick(path, matcher)(array[idx]);
+            if (typeof match !== 'undefined') {
+                result.push(match);
+            }
+        }
+
+        return result;
+    };
 }
 
 module.exports = pick; 
