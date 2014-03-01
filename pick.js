@@ -1,4 +1,12 @@
 function pick(path, matcher) {
+    var wrappedPick = pickWrapped(path, matcher);
+
+    return function(data) {
+        return unwrap(wrappedPick(data));
+    };
+}
+
+function pickWrapped(path, matcher) {
     path    = (typeof path === 'string') ? path.split("/").filter(nonEmpty) : path;
     matcher = asMatcher(matcher || valueDefined);
 
@@ -14,18 +22,43 @@ function pick(path, matcher) {
         if (typeof selector !== 'undefined') {
             return select(selector(data), selectorIdx+1);
         } else {
-            return data;
+            return data; 
         }
     }
 
-    return function(data) {
+    return function(data, parent) {
+        data = (data instanceof WrappedValue) ? data : wrap(data, parent); 
+
         var value = select(data, 0);
-        if (matcher(value)) {
+        if (typeof value !== 'undefined' && (value.valid || matcher(value))) {
+            value.valid = true;
             return value;
         } else {
             return defaultValue;
         }
     };
+}
+
+function wrap(value, parent, valid) {
+    if (typeof value === 'undefined') {
+        return value;
+    } else {
+        return new WrappedValue(value, parent, valid);
+    }
+}
+
+function unwrap(wrappedValue) {
+    if (typeof wrappedValue !== 'undefined') {
+        return wrappedValue.value; 
+    } else {
+        return undefined;
+    }
+}
+
+function WrappedValue(value, parent, valid) {
+    this.value = value;
+    this.parent = parent;
+    this.valid = valid;
 }
 
 function asMatcher(spec) {
@@ -64,8 +97,8 @@ function asMatcher(spec) {
     };
 }
 
-function valueDefined(selectedValue) {
-    return typeof selectedValue !== 'undefined';
+function valueDefined(wrappedValue) {
+    return typeof wrappedValue !== 'undefined';
 }
 
 function nonEmpty(selector) {
@@ -82,7 +115,11 @@ function asSelectors(path, matcher) {
     var selectors     = [];
 
     if (spec.field.length > 0) {
-        selectors.push(selectField(spec.field));
+        if (spec.field === '..') {
+            selectors.push(selectParent);
+        } else {
+            selectors.push(selectField(spec.field));
+        }
     }
 
     if (typeof spec.index !== 'undefined') {
@@ -114,48 +151,56 @@ function parseComponents(spec) {
     } 
 }
 
+function selectParent(wrappedObject) {
+    return wrappedObject.parent;
+}
+
 function selectField(fieldName) {
-    return function(object) {
-        return object[fieldName];
+    return function(wrappedObject) {
+        var object = wrappedObject.value;
+        return wrap(object[fieldName], wrappedObject);
     };
 }
 
 function selectIndex(index) {
     index = (typeof index === 'string') ? parseInt(index, 10) : index;
-    return function(array) {
-        return array[index];
+    return function(wrappedArray) {
+        var array = wrappedArray.value;
+        return wrap(array[index], wrappedArray);
     }
 }
 
 function selectFirstMatchingIndex(path, matcher) {
-    return function(array) {
-        var len = array.length;
-        var match;
+    return function(wrappedArray) {
+        var array = wrappedArray.value;
+        var len   = array.length;
+        var match = undefined;
 
         for (var idx = 0; idx < len; idx++) {
-            match = pick(path, matcher)(array[idx]);
+            match = pickWrapped(path, matcher)(array[idx], wrappedArray);
             if (typeof match !== 'undefined') {
-                break;
+                return match; 
             }
         }
 
-        return match;
+        return undefined;
     }
 }
 
 function selectAllMatchingIndexes(path, matcher) {
-    return function(array) {
+    return function(wrappedArray) {
+        var array  = wrappedArray.value;
         var result = [];
         var len    = array.length;
 
         for (var idx = 0; idx < len; idx++) {
-            var match = pick(path, matcher)(array[idx]);
+            var match = pickWrapped(path, matcher)(array[idx]);
             if (typeof match !== 'undefined') {
-                result.push(match);
+                result.push(match.value);
             }
         }
 
-        return result;
+        return wrap(result, wrappedArray, true);
     };
 }
 
