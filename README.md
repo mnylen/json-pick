@@ -20,8 +20,8 @@
     pick("/relationships[]/with/name")(person)     === ["Susan", "Katie"]
     
     // filtering with matchers
-    var currentlyDating = pick("/relationships[]:first/with/name", { "/../../status" : "ongoing" })(person) === "Susan"
-    var statusWithKatie = pick("/relationships[]:first/status", { "/../with/name" : "Katie" })(person)      === "ended"   
+    pick("/relationships[*]/with/name", { "/../../status" : "ongoing" })(person) === "Susan"
+    pick("/relationships[*]/status", { "/../with/name" : "Katie" })(person)      === "ended"   
  
 
 ## Paths
