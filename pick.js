@@ -1,4 +1,4 @@
-function q(path, matcher) {
+function pick(path, matcher) {
     path    = (typeof path === 'string') ? path.split("/").filter(nonEmpty) : path;
     matcher = matcher || valueDefined;
 
@@ -94,7 +94,7 @@ function selectFirstMatchingIndex(path, matcher) {
         var match;
 
         for (var idx = 0; idx < len; idx++) {
-            match = q(path, matcher)(array[idx]);
+            match = pick(path, matcher)(array[idx]);
             if (typeof match !== 'undefined') {
                 break;
             }
@@ -104,4 +104,4 @@ function selectFirstMatchingIndex(path, matcher) {
     }
 }
 
-module.exports = q;
+module.exports = pick; 

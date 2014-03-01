@@ -1,7 +1,7 @@
-var q = require('../q');
+var pick = require('../pick');
 var expect = require('chai').expect;
 
-describe('q: selecting path', function() {
+describe('pick: selecting paths', function() {
     var fixture = {
         "a" : {
             "b" : {
@@ -28,12 +28,12 @@ describe('q: selecting path', function() {
         "/b[*]/d"  : "d in path /b[2]/d", 
     }, function(path, expected) {
         it("should return " + path + " correctly from the fixture", function() {
-            expect(q(path)(fixture)).to.eql(expected);
+            expect(pick(path)(fixture)).to.eql(expected);
         });
     });
 });
 
-describe('q: selecting path with custom matcher', function() {
+describe('pick: selecting path with custom matcher', function() {
     var fixture = {
         "a" : 1,
         "b" : 2,
@@ -58,7 +58,7 @@ describe('q: selecting path with custom matcher', function() {
         "/c[*]" : 2
     }, function(path, expected) {
         it("should return " + path + " correctly from fixture", function() {
-            expect(q(path, evenMatcher)(fixture)).to.eql(expected);
+            expect(pick(path, evenMatcher)(fixture)).to.eql(expected);
         });
     });
 });

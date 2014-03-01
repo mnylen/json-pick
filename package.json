@@ -1,5 +1,5 @@
 {
-    "name" : "q.js",
+    "name" : "json-pick",
     "version" : "0.0.1",
     "devDependencies" : {
         "mocha" : "latest",
