@@ -1,6 +1,22 @@
 {
     "name" : "json-pick",
-    "version" : "0.0.1",
+    "version" : "0.1.0",
+    "description" : "pick(path, matcher)(data): pick values from JSON",
+    "keywords" : ["json", "object", "query"],
+    "bugs" : "https://github.com/mnylen/json-pick/issues", 
+    "license" : "MIT",
+    "repository" : {
+        "type" : "git",
+        "url" : "https://github.com/mnylen/json-pick"
+    },
+    "author" : {
+        "name" : "Mikko Nylén",
+        "url" : "http://mnylen.tumblr.com"
+    },
+    "files" : [
+        "pick.js"
+    ],
+    "main" : "pick.js",
     "devDependencies" : {
         "mocha" : "latest",
         "chai" : "1.9.0"
