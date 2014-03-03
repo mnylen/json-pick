@@ -1,6 +1,6 @@
 {
     "name" : "json-pick",
-    "version" : "0.1.0",
+    "version" : "0.1.1",
     "description" : "pick(path, matcher)(data): pick values from JSON",
     "keywords" : ["json", "object", "query"],
     "bugs" : "https://github.com/mnylen/json-pick/issues", 
