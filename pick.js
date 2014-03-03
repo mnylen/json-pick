@@ -4,7 +4,7 @@ function pick(path, matchObject, defaultValue) {
 
     function applyMatcher(selection) {
         if (!selection.matched) {
-            selection.matched = matcher(selection);
+            selection.matched = matcher(selection.value, selection.parent);
         }
 
         return selection.matched;
@@ -44,12 +44,12 @@ function compileMatcher(matchObject) {
         }
     }
 
-    return function(candidate) {
+    return function(candidate, candidateParent) {
         for(var idx = 0; idx < matchers.length; idx++) {
             var test      = matchers[idx];
-            var selection = test.selector(candidate);
+            var selection = test.selector(candidate, candidateParent);
 
-            if (selection.value !== test.expected) {
+            if (selection !== test.expected) {
                 return false;
             }
         }

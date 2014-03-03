@@ -97,8 +97,8 @@ testSuite("array selection", {
 });
 
 var numbers = [1,2,3,4,5,6,7,8,9,10];
-function isOdd(wrapped)   { return wrapped.value % 2 !== 0; } 
-function greaterThan(min) { return function(wrapped) { return wrapped.value > min; } }
+function isOdd(value)   { return value % 2 !== 0; } 
+function greaterThan(min) { return function(value) { return value > min; } }
 
 testSuite("user-provided matcher function", {
     "selects value when it returns true":
