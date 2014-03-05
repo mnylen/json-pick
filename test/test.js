@@ -93,7 +93,19 @@ testSuite("array selection", {
         [testPick("/[]/name")(persons), persons.map(pick("/name"))],
 
     "omit indexes that don't match subpath when using []":
-        [testPick("/[]/parents/father"), persons, [hugh]]
+        [testPick("/[]/parents/father"), persons, [hugh]],
+
+    "can handle undefined values in array when using []":
+        [testPick("/[]/name")([undefined, john]), ["John"]],
+
+    "can handle undefined values in array when using [*]":
+        [testPick("/[*]/name")([undefined, john]), "John"],
+
+    "can handle null values in array when using []":
+        [testPick("/[]/name")([null, john]), ["John"]],
+
+    "can handle null values in array when using [*]":
+        [testPick("/[*]/name")([null, john]), "John"],
 });
 
 var numbers = [1,2,3,4,5,6,7,8,9,10];

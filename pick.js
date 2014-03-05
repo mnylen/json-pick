@@ -61,6 +61,10 @@ function compileMatcher(matchObject) {
 function compileSelector(path, matcher) {
     var selectors = selectorsForPath(path, matcher);
     return function(currentSelection) {
+        if (typeof currentSelection === 'undefined' || currentSelection.value === null) {
+            return undefined;
+        }
+
         for (var idx = 0; idx < selectors.length; idx++) {
             var selector     = selectors[idx];
             currentSelection = selector(currentSelection);
